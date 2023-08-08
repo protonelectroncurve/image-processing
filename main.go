@@ -2,6 +2,7 @@ package main
 
 import (
 	"image"
+	"image/color"
 	"image/png"
 	"log"
 	"os"
@@ -10,6 +11,20 @@ import (
 )
 
 const SIZE_MAX_WIDTH = 420
+
+func convertToGrayscale(img image.Image) *image.Gray {
+	gray := image.NewGray(img.Bounds())
+	for y := 0; y < img.Bounds().Dy(); y++ {
+		for x := 0; x < img.Bounds().Dx(); x++ {
+			oldColor := img.At(x, y)
+			r, g, b, _ := oldColor.RGBA()
+			// Convert to grayscale using the standard conversion formula.
+			grayVal := 0.299*float64(r) + 0.587*float64(g) + 0.114*float64(b)
+			gray.Set(x, y, color.Gray{Y: uint8(grayVal / 256)})
+		}
+	}
+	return gray
+}
 
 func main() {
 	catFile, err := os.Open("original.png")
@@ -31,6 +46,9 @@ func main() {
 	// Resize the image.
 	m := resize.Resize(uint(newWidth), uint(newHeight), img, resize.Lanczos3)
 
+	// Convert to grayscale.
+	grayImg := convertToGrayscale(m)
+
 	// Save the resized image.
 	out, err := os.Create("resized.png")
 	if err != nil {
@@ -38,7 +56,7 @@ func main() {
 	}
 	defer out.Close()
 
-	err = png.Encode(out, m)
+	err = png.Encode(out, grayImg)
 	if err != nil {
 		log.Fatalf("failed encode image: %s", err)
 	}
